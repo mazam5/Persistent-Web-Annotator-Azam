@@ -7,15 +7,24 @@ export default defineManifest({
   description: pkg.description,
   version: pkg.version,
   icons: {
-    48: "public/logo.png",
+    128: "public/logo.png",
   },
   action: {
-    default_icon: {
-      48: "public/logo.png",
-    },
+    default_icon: "public/logo.png",
     default_popup: "src/popup/index.html",
+    default_title: "Persistent Annotator",
   },
-  permissions: ["sidePanel", "contentSettings"],
+  permissions: [
+    "sidePanel",
+    "contentSettings",
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "tabs",
+  ],
+  background: {
+    service_worker: "src/background/service-worker.ts",
+  },
   content_scripts: [
     {
       js: ["src/content/main.tsx"],
