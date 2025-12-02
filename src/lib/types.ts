@@ -5,3 +5,7 @@ export interface Note {
   domLocator: string;
   createdAt: number;
 }
+
+export interface StoredNotes {
+  notes: Note[];
+}

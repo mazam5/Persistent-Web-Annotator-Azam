@@ -1,3 +1,4 @@
+// Create context menu on install
 // this runs in the background it checks for context when the user right clicks
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -7,12 +8,25 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+// When user clicks "Add ContextMemo"
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "add-contextmemo" && tab?.id) {
+    // first: Ask content script to get DOM location
     chrome.tabs.sendMessage(tab.id, {
-      type: "OPEN_EDITOR_AT_SELECTION",
-      selection: info.selectionText,
+      type: "REQUEST_SELECTION_CONTEXT",
+      selectedText: info.selectionText,
     });
-    console.log("memo clicked");
+  }
+});
+
+// Receive DOM locator from content script (App.tsx)
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.type === "SELECTION_CONTEXT_RESULT" && sender.tab?.id) {
+    // second: Forward data to the React content script (App.tsx)
+    chrome.tabs.sendMessage(sender.tab.id, {
+      type: "OPEN_EDITOR_AT_SELECTION",
+      selection: msg.selectedText,
+      domPath: msg.domPath,
+    });
   }
 });
