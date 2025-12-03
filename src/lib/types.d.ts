@@ -1,16 +1,16 @@
 interface Note {
-  id: string;
-  url: string;
-  content: string;
-  domLocator: string;
-  createdAt: number;
+  id: string
+  url: string
+  content: string
+  domLocator: string
+  createdAt: number
 }
 
 interface HybridLocator {
-  cssPath: string;
+  cssPath: string
   textSnippet: {
-    before: string;
-    selected: string;
-    after: string;
-  };
+    before: string
+    selected: string
+    after: string
+  }
 }

@@ -10,5 +10,5 @@ createRoot(container).render(
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
       <App />
     </ThemeProvider>
-  </StrictMode>,
+  </StrictMode>
 )
