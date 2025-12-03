@@ -26,7 +26,18 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     chrome.tabs.sendMessage(sender.tab.id, {
       type: "OPEN_EDITOR_AT_SELECTION",
       selection: msg.selectedText,
-      domPath: msg.domPath,
+      // domPath: msg.domPath,
+      domLocator: msg.domLocator,
     });
   }
+});
+
+chrome.storage.onChanged.addListener(() => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]?.id) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        type: "NOTES_UPDATED",
+      });
+    }
+  });
 });

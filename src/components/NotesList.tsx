@@ -1,27 +1,59 @@
 import { Note } from "@/lib/types";
-import { Trash } from "lucide-react";
+import { format } from "date-fns";
+import { Download, Eye, EyeOff, Trash, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { format } from 'date-fns';
 
 export default function NotesList() {
   const [allNotes, setAllNotes] = useState<Note[]>([]);
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
   const [searchNote, setSearchNote] = useState("");
+  const [showAllNotes, setShowAllNotes] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState("");
+
+  // Get current tab URL
   useEffect(() => {
-    chrome.storage.local.get(["notes"], (items) => {
-      const notes = Array.isArray(items.notes) ? (items.notes as Note[]) : [];
-      setAllNotes(notes);
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+      const url = tabs[0]?.url || "";
+      setCurrentUrl(url);
+
+      chrome.storage.local.get(["notes"], (items) => {
+        const notes = Array.isArray(items.notes) ? items.notes : [];
+        setAllNotes(notes);
+      });
     });
   }, []);
 
+  // Apply filters
   useEffect(() => {
-    chrome.storage.local.get(["notes"], (items) => {
-      const notes = Array.isArray(items.notes) ? (items.notes as Note[]) : [];
-      const filteredNotes = notes.filter((note) =>
-        note.content.toLowerCase().includes(searchNote.toLowerCase())
-      );
-      setAllNotes(filteredNotes);
-    })
-  }, [searchNote]);
+    const q = searchNote.toLowerCase();
+
+    let visibleNotes = allNotes;
+
+    // Filter by URL unless "Show All" is checked
+    if (!showAllNotes) {
+      visibleNotes = visibleNotes.filter((n) => n.url === currentUrl);
+    }
+
+    // Search matches
+    visibleNotes = visibleNotes.filter((note) => {
+      const content = (note.content || "").toLowerCase();
+      const url = (note.url || "").toLowerCase();
+      const selectedText = (getSelectedText(note) || "").toLowerCase();
+
+      return content.includes(q) || url.includes(q) || selectedText.includes(q);
+    });
+
+    setFilteredNotes(visibleNotes);
+  }, [allNotes, searchNote, showAllNotes, currentUrl]);
+
+  const getSelectedText = (note: Note) => {
+    try {
+      const obj = JSON.parse(note.domLocator);
+      return obj.textSnippet?.selected || note.content || "";
+    } catch {
+      return note.content || "";
+    }
+  };
 
   const deleteNote = (id: string) => {
     chrome.storage.local.get(["notes"], (items) => {
@@ -30,64 +62,139 @@ export default function NotesList() {
 
       chrome.storage.local.set({ notes: updated }, () => {
         setAllNotes(updated);
+
+        // Tell content script to remove highlight
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              type: "REMOVE_HIGHLIGHT",
+              noteId: id,
+            });
+          }
+        });
       });
     });
   };
+  const selected = (note: Note) => () => {
+    try {
+      const obj = JSON.parse(note.domLocator);
+      return obj.textSnippet?.selected || note.content;
+    } catch {
+      return note.content;
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchNote("");
+  };
+
+  const handleExportAsJSON = () => {
+    const dataStr =
+      "data:text/json;charset=utf-8," +
+      encodeURIComponent(JSON.stringify(allNotes));
+    const downloadAnchorNode = document.createElement("a");
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "notes.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
 
   return (
-    <div className="p-4 space-y-3">
-      {allNotes.length === 0 ? (
-        <div className="text-gray-500 text-sm italic">No notes found.</div>
+    <div className="space-y-3">
+      {filteredNotes.length === 0 ? (
+        <div className="text-center text-2xl font-semibold text-gray-500 italic dark:text-gray-100">
+          No notes found.
+        </div>
       ) : (
-        <div>
-          <input
-            type="text"
-            placeholder="Search notes..."
-            value={searchNote}
-            onChange={(e) => setSearchNote(e.target.value)}
-            className="w-full p-2 border border-gray-200 rounded"
-          />
+        <>
+          <div
+            className="flex items-center justify-between gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-gray-900"
+            id="actions"
+          >
+            {/* Search Input by URL, title, or text */}
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="🔍 by URL, title, or text..."
+                value={searchNote}
+                onChange={(e) => setSearchNote(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 pr-10 text-sm text-gray-700 transition focus:border-blue-500 focus:ring focus:ring-blue-300/40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              />
+              {searchNote.length > 0 && (
+                <button
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 transition hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+                  onClick={clearSearch}
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Toggle Button for show all notes | show current tabs' notes */}
+            <button
+              className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+              onClick={() => setShowAllNotes(!showAllNotes)}
+            >
+              {showAllNotes ? (
+                <>
+                  <EyeOff size={18} />
+                  <span>Current</span>
+                </>
+              ) : (
+                <>
+                  <Eye size={18} />
+                  <span>All</span>
+                </>
+              )}
+            </button>
+
+            {/* Download Button */}
+            <button
+              type="button"
+              title="Download as JSON"
+              onClick={handleExportAsJSON}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-500 active:scale-95"
+            >
+              <Download size={18} />
+            </button>
+          </div>
           <ol className="space-y-2">
-            {allNotes.map((note) => (
+            {filteredNotes.map((note) => (
               <li
                 key={note.id}
-                className="border border-gray-200 rounded-xl p-3 shadow-sm hover:shadow transition bg-white"
+                className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-gray-600 shadow-sm transition duration-300 ease-in-out hover:shadow dark:bg-gray-800 dark:text-gray-50"
               >
                 <div className="flex justify-between">
-
-                  <h2 className="text-lg font-semibold">{note.content}</h2>
-                  <span className="text-xs text-gray-400 mt-1">
-                    {format(new Date(note.createdAt), 'dd-MMM-yyyy H:mm')}
-                  </span>
+                  <h2 className="text-md font-bold italic">{note.content}</h2>
+                  <button
+                    className="float-right mt-1 rounded p-1 text-sm text-red-500 hover:bg-red-500 hover:text-white"
+                    onClick={() => deleteNote(note.id)}
+                  >
+                    <Trash size={16} />
+                  </button>
                 </div>
-                <div className="bg-gray-800">
 
-                  <code className="text-xs text-gray-400 mt-1">
-                    {note.domLocator}
-                  </code>
-                </div>
+                <p className="mt-1 text-sm">{selected(note)()}</p>
+
                 {note.url && (
                   <a
                     href={note.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-500 text-sm underline mt-1 inline-block"
+                    className="mt-1 inline-block text-sm break-all text-blue-500 underline"
                   >
-                    View Source
+                    {note.url}
                   </a>
                 )}
 
-                <button
-                  className="text-red-500 text-sm underline mt-1 inline-block float-right"
-                  onClick={() => deleteNote(note.id)}
-                >
-                  <Trash />
-                </button>
+                <div className="mt-1 text-xs text-gray-400">
+                  {format(new Date(note.createdAt), "dd-MMM-yyyy H:mm")}
+                </div>
               </li>
             ))}
           </ol>
-        </div>
-
+        </>
       )}
     </div>
   );

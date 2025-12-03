@@ -16,12 +16,10 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ formData, setFormData, onSave
         onSave?.(formData);
     };
     return (
-        <div className="border p-5">
-            <h2 className="text-xl font-bold m-5">New Note</h2>
-            <form onSubmit={handleSubmit} className="p-4 border rounded-lg shadow">
-
+        <div className="border">
+            <form onSubmit={handleSubmit} className="p-4 rounded-lg shadow">
                 <label className="block mb-3">
-                    <span className="font-medium text-sm">Content</span>
+                    <span className="font-medium text-sm">Content Note</span>
                     <input
                         autoFocus
                         type="text"
@@ -38,11 +36,11 @@ const AddNoteForm: React.FC<AddNoteFormProps> = ({ formData, setFormData, onSave
                 </label>
 
                 <div className="flex gap-2 mt-4">
-                    <button type="submit" className="px-4 border flex gap-2 py-2 bg-blue-600 text-white rounded">
+                    <button type="submit" className="px-4 border flex gap-2 py-2 bg-green-600 hover:bg-green-300 text-white rounded">
                         <Save />
                         Save
                     </button>
-                    <button type="button" onClick={onCancel} className=" border px-4 py-2 bg-gray-300 rounded flex gap-2">
+                    <button type="button" onClick={onCancel} className=" border px-4 py-2 rounded flex gap-2">
                         <Ban />
                         Cancel
                     </button>

@@ -1,6 +1,6 @@
 {
   "name": "persistent-annotator-azam",
-  "description": "Add notes/annotations on any page with this extension",
+  "description": "Highlight text and Add persistent notes on any webpage",
   "type": "module",
   "version": "1.0.0",
   "private": true,
