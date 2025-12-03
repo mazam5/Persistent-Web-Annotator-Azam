@@ -1,6 +1,11 @@
-import { Note } from "@/lib/types";
 import { format } from "date-fns";
-import { Download, Eye, EyeOff, Trash, X } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowRightLeft,
+  Download,
+  Trash,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function NotesList() {
@@ -91,10 +96,10 @@ export default function NotesList() {
   const handleExportAsJSON = () => {
     const dataStr =
       "data:text/json;charset=utf-8," +
-      encodeURIComponent(JSON.stringify(allNotes));
+      encodeURIComponent(JSON.stringify(filteredNotes));
     const downloadAnchorNode = document.createElement("a");
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "notes.json");
+    downloadAnchorNode.setAttribute("download", `${currentUrl}.json`);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -133,17 +138,17 @@ export default function NotesList() {
 
             {/* Toggle Button for show all notes | show current tabs' notes */}
             <button
-              className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+              className="flex w-24 items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
               onClick={() => setShowAllNotes(!showAllNotes)}
             >
               {showAllNotes ? (
                 <>
-                  <EyeOff size={18} />
+                  <ArrowRightLeft size={18} />
                   <span>Current</span>
                 </>
               ) : (
                 <>
-                  <Eye size={18} />
+                  <ArrowLeftRight size={18} />
                   <span>All</span>
                 </>
               )}
@@ -159,6 +164,10 @@ export default function NotesList() {
               <Download size={18} />
             </button>
           </div>
+          <p className="text-center text-sm text-gray-500 dark:text-gray-100">
+            {filteredNotes.length} note{filteredNotes.length > 1 && "s"} for{" "}
+            {showAllNotes ? "all tabs" : "current tab"}
+          </p>
           <ol className="space-y-2">
             {filteredNotes.map((note) => (
               <li
